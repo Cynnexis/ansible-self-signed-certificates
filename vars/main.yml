@@ -1,0 +1,8 @@
+---
+# vars file for ansible-self-signed-certificates
+
+ca:
+  key: "{{ self_signed_certs_dir }}/ca.key"
+  csr: "{{ self_signed_certs_dir }}/ca.csr"
+  crt: "{{ self_signed_certs_dir }}/ca.crt"
+  pem: "{{ self_signed_certs_dir }}/ca.pem"

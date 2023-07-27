@@ -1,0 +1,102 @@
+---
+#
+# Generate a server certificate and a client certificates for a service.
+#
+# This task uses `tls_pipeline.yml`. It will generate one server certificate for
+# the service, and one client certificate.
+# The arguments for this task can be found below:
+#
+# service_pipeline_args:
+#   name: <string>     [REQUIRED]
+#   cert_dir: <string> [REQUIRED]
+#   validity: <string | default(omit)>
+#   private_key:
+#     type: <string | default(omit)>
+#     size: <number | default(omit)>
+#   csr:
+#     common_name: <string | default(omit)>
+#     subject_alt_name: <string[] | default(omit)>
+#     country_name: <string | default(omit)>
+#     state_or_province_name: <string | default(omit)>
+#     locality_name: <string | default(omit)>
+#     organization_name: <string | default(omit)>
+#     organizational_unit_name: <string | default(omit)>
+#   ca:
+#     key: <string | default(omit)>
+#     crt: <string | default(omit)>
+#   permissions:
+#     owner: <string | default(omit)>
+#     group: <string | default(omit)>
+#     mode: <any | default(omit)>
+#   email: <string | default(omit)>
+#   verify: <bool | default(omit)>
+#
+# The task will generate a directory with the name of the service
+# ({{ service_pipeline_args.name }}), and with the following files in it:
+# - server.key: The private key of the server certificate. DO NOT SHARE IT.
+# - server.csr: The server certificate signing request.
+# - server.crt: The server certificate.
+# - server.pem: The private key of the server certificate and the certificate
+#   itself. DO NOT SHARE IT.
+# - client.key: The private key of the client certificate. DO NOT SHARE IT.
+# - client.cst: The client certificate signing request.
+# - client.crt: The client certificate.
+# - client.pem: The private key of the client certificate and the certificate
+#   itself. DO NOT SHARE IT.
+#
+
+- name: Generate server certificate
+  include_tasks: tls_pipeline.yml
+  vars:
+    tls_pipeline_args:
+      output_dir: "{{ service_pipeline_args.cert_dir }}/{{ service_pipeline_args.name }}"
+      type: server
+      validity: "{{ service_pipeline_args.validity | default(omit) }}"
+      private_key:
+        type: "{{ service_pipeline_args.private_key.type | default(omit) }}"
+        size: "{{ service_pipeline_args.private_key.size | default(omit) }}"
+      csr:
+        common_name: "{{ service_pipeline_args.csr.common_name | default(omit) }}"
+        subject_alt_name: "{{ service_pipeline_args.csr.subject_alt_name | default(omit) }}"
+        country_name: "{{ service_pipeline_args.csr.country_name | default(omit) }}"
+        state_or_province_name: "{{ service_pipeline_args.csr.state_or_province_name | default(omit) }}"
+        locality_name: "{{ service_pipeline_args.csr.locality_name | default(omit) }}"
+        organization_name: "{{ service_pipeline_args.csr.organization_name | default(omit) }}"
+        organizational_unit_name: "{{ service_pipeline_args.csr.organizational_unit_name | default(omit) }}"
+      ca:
+        key: "{{ service_pipeline_args.ca.key | default(ca.key) }}"
+        crt: "{{ service_pipeline_args.ca.crt | default(ca.crt) }}"
+      permissions:
+        owner: "{{ service_pipeline_args.permissions.owner | default(omit) }}"
+        group: "{{ service_pipeline_args.permissions.group | default(omit) }}"
+        mode: "{{ service_pipeline_args.permissions.mode | default(omit) }}"
+      email: "{{ service_pipeline_args.email | default(omit) }}"
+      verify: "{{ service_pipeline_args.verify | default(omit) }}"
+
+- name: Generate client certificate
+  include_tasks: tls_pipeline.yml
+  vars:
+    tls_pipeline_args:
+      output_dir: "{{ service_pipeline_args.cert_dir }}"
+      type: client
+      validity: "{{ service_pipeline_args.validity | default(omit) }}"
+      private_key:
+        type: "{{ service_pipeline_args.private_key.type | default(omit) }}"
+        size: "{{ service_pipeline_args.private_key.size | default(omit) }}"
+      csr:
+        common_name: "{{ service_pipeline_args.csr.common_name | default(omit) }}"
+        subject_alt_name: "{{ service_pipeline_args.csr.subject_alt_name | default(omit) }}"
+        country_name: "{{ service_pipeline_args.csr.country_name | default(omit) }}"
+        state_or_province_name: "{{ service_pipeline_args.csr.state_or_province_name | default(omit) }}"
+        locality_name: "{{ service_pipeline_args.csr.locality_name | default(omit) }}"
+        organization_name: "{{ service_pipeline_args.csr.organization_name | default(omit) }}"
+        organizational_unit_name: "{{ service_pipeline_args.csr.organizational_unit_name | default(omit) }}"
+      ca:
+        key: "{{ service_pipeline_args.ca.key | default(ca.key) }}"
+        crt: "{{ service_pipeline_args.ca.crt | default(ca.crt) }}"
+      permissions:
+        owner: "{{ service_pipeline_args.permissions.owner | default(omit) }}"
+        group: "{{ service_pipeline_args.permissions.group | default(omit) }}"
+        mode: "{{ service_pipeline_args.permissions.mode | default(omit) }}"
+      email: "{{ service_pipeline_args.email | default(omit) }}"
+      verify: "{{ service_pipeline_args.verify | default(omit) }}"

@@ -1,0 +1,142 @@
+---
+#
+# Generate a private key and a TLS certificate.
+#
+# This files gather all Ansible tasks to generate a certificate with its key.
+# You will find below the list of variable that will be used to create the
+# certificate:
+#
+# tls_pipeline_args:
+#   output_dir: <string>               [REQUIRED]
+#   type: <string: {ca|server|client}> [REQUIRED]
+#   name: <string | default(type)>
+#   validity: <string | default('+3650d')>
+#   private_key:
+#     type: <string | default(omit)>
+#     size: <number | default(omit)>
+#   csr:
+#     common_name: <string | default(omit)>
+#     subject_alt_name: <string[] | default(omit)>
+#     country_name: <string | default(omit)>
+#     state_or_province_name: <string | default(omit)>
+#     locality_name: <string | default(omit)>
+#     organization_name: <string | default(omit)>
+#     organizational_unit_name: <string | default(omit)>
+#   ca:
+#     key: <string | default(ca.key)>
+#     crt: <string | default(ca.crt)>
+#   permissions:
+#     owner: <string | default('root')>
+#     group: <string | default('root')>
+#     mode: <any | default('0640')>
+#   email: <string | default(omit)>
+#   verify: <bool | default(true)>
+#
+# The following files are generated under {{ tls_pipeline_args.output_dir }}:
+#   - {{ tls_pipeline_args.name }}.key: The private key. DO NOT SHARE IT.
+#   - {{ tls_pipeline_args.name }}.csr: The certificate signing request.
+#   - {{ tls_pipeline_args.name }}.crt: The certificate.
+#   - {{ tls_pipeline_args.name }}.pem: The private key followed by the
+#     certificate. DO NOT SHARE IT.
+#
+
+- name: Set variables
+  vars:
+    tls_pipeline_vars:
+      path:
+        key: "{{ tls_pipeline_args.output_dir }}/{{ tls_pipeline_args.name | default(tls_pipeline_args.type) }}.key"
+        csr: "{{ tls_pipeline_args.output_dir }}/{{ tls_pipeline_args.name | default(tls_pipeline_args.type) }}.csr"
+        crt: "{{ tls_pipeline_args.output_dir }}/{{ tls_pipeline_args.name | default(tls_pipeline_args.type) }}.crt"
+        pem: "{{ tls_pipeline_args.output_dir }}/{{ tls_pipeline_args.name | default(tls_pipeline_args.type) }}.pem"
+
+      ca:
+        key: "{{ tls_pipeline_args.ca.key | default(ca.key) }}"
+        crt: "{{ tls_pipeline_args.ca.crt | default(ca.crt) }}"
+
+      perm:
+        owner: "{{ tls_pipeline_args.permissions.owner | default('root') }}"
+        group: "{{ tls_pipeline_args.permissions.group | default('root') }}"
+        mode: "{{ tls_pipeline_args.permissions.mode | default('0640') }}"
+
+      validity: "{{ tls_pipeline_args.verify | default('+3650d') }}"
+      verify: "{{ tls_pipeline_args.verify | default(True) }}"
+  block:
+
+    - name: Ensure the certificate directory exists
+      file:
+        path: "{{ tls_pipeline_args.output_dir }}"
+        state: directory
+        owner: "{{ tls_pipeline_args.permissions.owner }}"
+        group: "{{ tls_pipeline_args.permissions.group }}"
+        mode: 0750
+
+    - name: Generate the private key for certificate
+      community.crypto.openssl_privatekey:
+        path: "{{ tls_pipeline_vars.path.key }}"
+        type: "{{ tls_pipeline_args.private_key.type | default(omit) }}"
+        size: "{{ tls_pipeline_args.private_key.size | default(omit) }}"
+        owner: "{{ tls_pipeline_vars.perm.owner }}"
+        group: "{{ tls_pipeline_vars.perm.group }}"
+        mode: "{{ tls_pipeline_vars.perm.mode }}"
+      register: key_result
+
+    - name: Certificate Signing Request (CSR) for the certificate
+      community.crypto.openssl_csr:
+        path: "{{ tls_pipeline_vars.path.csr }}"
+        privatekey_path: "{{ tls_pipeline_vars.path.key }}"
+        basic_constraints:
+          - "{{ 'CA:TRUE' if tls_pipeline_args.type == 'ca' else 'CA:FALSE' }}"
+        basic_constraints_critical: true
+        key_usage:
+          - "{{ 'cRLSign' if tls_pipeline_args.type == 'ca' else 'nonRepudiation' }}"
+          - digitalSignature
+          - keyEncipherment
+        key_usage_critical: true
+        extended_key_usage:
+          - "{{ 'serverAuth' if tls_pipeline_args.type == 'server' else 'clientAuth' }}"
+        extended_key_usage_critical: true
+        common_name: "{{ tls_pipeline_args.csr.common_name | default(omit) }}"
+        email_address: "{{ tls_pipeline_args.email | default(omit) }}"
+        country_name: "{{ tls_pipeline_args.csr.country_code | default(omit) }}"
+        state_or_province_name: "{{ tls_pipeline_args.csr.state_or_province_name | default(omit) }}"
+        locality_name: "{{ tls_pipeline_args.csr.locality_name | default(omit) }}"
+        organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }} "
+        organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }} "
+        subject_alt_name: "{{ tls_pipeline_args.csr.subject_alt_name | default(omit) }}"
+
+    - name: Generate self-signed certificate from CSR, and signed with the generated CA certificate
+      community.crypto.x509_certificate:
+        path: "{{ tls_pipeline_vars.path.crt }}"
+        csr_path: "{{ tls_pipeline_vars.path.csr }}"
+        privatekey_path: "{{ tls_pipeline_vars.path.key }}"
+        provider: "{{ 'selfsigned' if tls_pipeline_args.type == 'ca' else 'ownca' }}"
+        selfsigned_not_after: "{{ cert_validity if tls_pipeline_args.type == 'ca' else omit }}"
+        ownca_path: "{{ omit if tls_pipeline_args.type == 'ca' else tls_pipeline_vars.ca.crt }}"
+        ownca_privatekey_path: "{{ omit if tls_pipeline_args.type == 'ca' else tls_pipeline_vars.ca.key }}"
+        ownca_not_after: "{{ omit if tls_pipeline_args.type == 'ca' else (tls_pipeline_args.validity | default('+3650d')) }}"
+        owner: "{{ tls_pipeline_vars.perm.owner }}"
+        group: "{{ tls_pipeline_vars.perm.group }}"
+        mode: "{{ tls_pipeline_vars.perm.mode }}"
+      register: cert_result
+
+    - name: Ensure that the certificate exists
+      file:
+        path: "{{ tls_pipeline_vars.path.crt }}"
+        state: file
+
+    - name: Print certificate information
+      when: ansible_verbosity >= 1
+      shell:
+        cmd: openssl x509 -noout -text -in "{{ tls_pipeline_vars.path.crt }}"
+      changed_when: false
+
+    - name: Verify the certificate
+      when: cert_result.changed and tls_pipeline_args.type != 'ca' and tls_pipeline_vars.verify
+      shell:
+        cmd: openssl verify -verbose -check_ss_sig -CAfile "{{ tls_pipeline_vars.ca.crt }}" -purpose "{{ 'sslserver' if tls_pipeline_args.type == 'server' else 'sslclient' }}" "{{ tls_pipeline_vars.path.crt }}"
+      changed_when: false
+
+    - name: Generate the PEM file (private key followed by the certificate)
+      when: key_result.changed or cert_result.changed
+      shell:
+        cmd: cat "{{ tls_pipeline_vars.path.key }}" "{{ tls_pipeline_vars.path.crt }}" > "{{ tls_pipeline_vars.path.pem }}" && chmod "{{ tls_pipeline_vars.perm.mode }}" "{{ tls_pipeline_vars.path.pem }}"

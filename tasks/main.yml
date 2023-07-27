@@ -1,0 +1,55 @@
+---
+# tasks file for ansible-self-signed-certificates
+
+- name: Generate CA certificate
+  include_tasks: tls_pipeline.yml
+  vars:
+    tls_pipeline_args:
+      output_dir: "{{ self_signed_certs_dir }}"
+      type: ca
+      validity: "{{ self_signed_ca_cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
+      private_key:
+        type: "{{ self_signed_ca_private_key_type | default(self_signed_default_private_key_type | default(omit)) }}"
+        size: "{{ self_signed_ca_private_key_size | default(self_signed_default_private_key_size | default(omit)) }}"
+      csr:
+        common_name: "{{ self_signed_ca_common_name | default(self_signed_default_common_name | default(omit)) }}"
+        subject_alt_name: "{{ self_signed_ca_subject_alt_name | default(omit) }}"
+        country_name: "{{ self_signed_ca_country_name | default(self_signed_default_country_name | default(omit)) }}"
+        state_or_province_name: "{{ self_signed_ca_state_or_province_name | default(self_signed_default_state_or_province_name | default(omit)) }}"
+        organization_name: "{{ self_signed_ca_organization_name | default(self_signed_default_organization_name | default(omit)) }}"
+        organizational_unit_name: "{{ self_signed_ca_organizational_unit_name | default(self_signed_default_organizational_unit_name | default(omit)) }}"
+      permissions:
+        owner: "{{ self_signed_ca_owner | default(self_signed_owner | default(omit)) }}"
+        group: "{{ self_signed_ca_group | default(self_signed_group | default(omit)) }}"
+        mode: "{{ self_signed_ca_mode | default(self_signed_mode | default(omit)) }}"
+      email: "{{ self_signed_ca_email_address | default(self_signed_default_email_address | default(omit)) }}"
+      verify: false
+
+- name: Generate server and client certificates
+  include_tasks: service_pipeline.yml
+  vars:
+    service_pipeline_args:
+      output_dir: "{{ self_signed_certs_dir }}"
+      validity: "{{ item.cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
+      private_key:
+        type: "{{ item.private_key_type | default(self_signed_default_private_key_type | default(omit)) }}"
+        size: "{{ item.private_key_size | default(self_signed_default_private_key_size | default(omit)) }}"
+      csr:
+        common_name: "{{ item.common_name | default(self_signed_default_common_name | default(omit)) }}"
+        subject_alt_name: "{{ item.subject_alt_name | default(omit) }}"
+        country_name: "{{ item.country_name | default(self_signed_default_country_name | default(omit)) }}"
+        state_or_province_name: "{{ item.state_or_province_name | default(self_signed_default_state_or_province_name | default(omit)) }}"
+        organization_name: "{{ item.organization_name | default(self_signed_default_organization_name | default(omit)) }}"
+        organizational_unit_name: "{{ item.organizational_unit_name | default(self_signed_default_organizational_unit_name | default(omit)) }}"
+      ca:
+        key: "{{ ca.key }}"
+        crt: "{{ ca.crt }}"
+      permissions:
+        owner: "{{ item.owner | default(self_signed_owner | default(omit)) }}"
+        group: "{{ item.group | default(self_signed_group | default(omit)) }}"
+        mode: "{{ item.mode | default(self_signed_mode | default(omit)) }}"
+      email: "{{ item.email_address | default(self_signed_default_email_address | default(omit)) }}"
+      verify: false
+  loop: "{{ self_signed_certificates }}"
+  loop_control:
+    label: "{{ item.name }}"

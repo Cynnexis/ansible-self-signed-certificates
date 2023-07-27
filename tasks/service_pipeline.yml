@@ -77,7 +77,7 @@
   include_tasks: tls_pipeline.yml
   vars:
     tls_pipeline_args:
-      output_dir: "{{ service_pipeline_args.cert_dir }}"
+      output_dir: "{{ service_pipeline_args.cert_dir }}/{{ service_pipeline_args.name }}"
       type: client
       validity: "{{ service_pipeline_args.validity | default(omit) }}"
       private_key:

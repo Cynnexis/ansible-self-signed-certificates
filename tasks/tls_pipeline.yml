@@ -140,7 +140,7 @@
         csr_path: "{{ tls_pipeline_vars.path.csr }}"
         privatekey_path: "{{ tls_pipeline_vars.path.key }}"
         provider: "{{ 'selfsigned' if tls_pipeline_args.type == 'ca' else 'ownca' }}"
-        selfsigned_not_after: "{{ cert_validity if tls_pipeline_args.type == 'ca' else omit }}"
+        selfsigned_not_after: "{{ (tls_pipeline_args.validity | default('+3650d')) if tls_pipeline_args.type == 'ca' else omit }}"
         ownca_path: "{{ omit if tls_pipeline_args.type == 'ca' else tls_pipeline_vars.ca.crt }}"
         ownca_privatekey_path: "{{ omit if tls_pipeline_args.type == 'ca' else tls_pipeline_vars.ca.key }}"
         ownca_not_after: "{{ omit if tls_pipeline_args.type == 'ca' else (tls_pipeline_args.validity | default('+3650d')) }}"

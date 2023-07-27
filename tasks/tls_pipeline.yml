@@ -80,20 +80,47 @@
         mode: "{{ tls_pipeline_vars.perm.mode }}"
       register: key_result
 
-    - name: Certificate Signing Request (CSR) for the certificate
+    - name: Certificate Signing Request (CSR) for CA
+      when: tls_pipeline_args.type == 'ca'
       community.crypto.openssl_csr:
         path: "{{ tls_pipeline_vars.path.csr }}"
         privatekey_path: "{{ tls_pipeline_vars.path.key }}"
         basic_constraints:
-          - "{{ 'CA:TRUE' if tls_pipeline_args.type == 'ca' else 'CA:FALSE' }}"
+          - 'CA:TRUE'
         basic_constraints_critical: true
         key_usage:
-          - "{{ 'cRLSign' if tls_pipeline_args.type == 'ca' else 'nonRepudiation' }}"
+          - cRLSign
+          - digitalSignature
+          - keyEncipherment
+        key_usage_critical: true
+        extended_key_usage_critical: true
+        common_name: "{{ tls_pipeline_args.csr.common_name | default(omit) }}"
+        email_address: "{{ tls_pipeline_args.email | default(omit) }}"
+        country_name: "{{ tls_pipeline_args.csr.country_code | default(omit) }}"
+        state_or_province_name: "{{ tls_pipeline_args.csr.state_or_province_name | default(omit) }}"
+        locality_name: "{{ tls_pipeline_args.csr.locality_name | default(omit) }}"
+        organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }} "
+        organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }} "
+        subject_alt_name: "{{ tls_pipeline_args.csr.subject_alt_name | default(omit) }}"
+        owner: "{{ tls_pipeline_vars.perm.owner }}"
+        group: "{{ tls_pipeline_vars.perm.group }}"
+        mode: "{{ tls_pipeline_vars.perm.mode }}"
+
+    - name: Certificate Signing Request (CSR) for the certificate
+      when: tls_pipeline_args.type != 'ca'
+      community.crypto.openssl_csr:
+        path: "{{ tls_pipeline_vars.path.csr }}"
+        privatekey_path: "{{ tls_pipeline_vars.path.key }}"
+        basic_constraints:
+          - CA:FALSE
+        basic_constraints_critical: true
+        key_usage:
+          - nonRepudiation
           - digitalSignature
           - keyEncipherment
         key_usage_critical: true
         extended_key_usage:
-          - "{{ 'serverAuth' if tls_pipeline_args.type == 'server' else ('clientAuth' if tls_pipeline_args.type == 'client' else omit) }}"
+          - "{{ 'serverAuth' if tls_pipeline_args.type == 'server' else 'clientAuth' }}"
         extended_key_usage_critical: true
         common_name: "{{ tls_pipeline_args.csr.common_name | default(omit) }}"
         email_address: "{{ tls_pipeline_args.email | default(omit) }}"

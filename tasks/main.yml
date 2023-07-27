@@ -29,6 +29,7 @@
   include_tasks: service_pipeline.yml
   vars:
     service_pipeline_args:
+      name: "{{ item.name }}"
       cert_dir: "{{ self_signed_certs_dir }}"
       validity: "{{ item.cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
       private_key:

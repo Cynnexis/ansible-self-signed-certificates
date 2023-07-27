@@ -93,7 +93,7 @@
           - keyEncipherment
         key_usage_critical: true
         extended_key_usage:
-          - "{{ 'serverAuth' if tls_pipeline_args.type == 'server' else 'clientAuth' }}"
+          - "{{ 'serverAuth' if tls_pipeline_args.type == 'server' else ('clientAuth' if tls_pipeline_args.type == 'client' else omit) }}"
         extended_key_usage_critical: true
         common_name: "{{ tls_pipeline_args.csr.common_name | default(omit) }}"
         email_address: "{{ tls_pipeline_args.email | default(omit) }}"
@@ -103,6 +103,9 @@
         organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }} "
         organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }} "
         subject_alt_name: "{{ tls_pipeline_args.csr.subject_alt_name | default(omit) }}"
+        owner: "{{ tls_pipeline_vars.perm.owner }}"
+        group: "{{ tls_pipeline_vars.perm.group }}"
+        mode: "{{ tls_pipeline_vars.perm.mode }}"
 
     - name: Generate self-signed certificate from CSR, and signed with the generated CA certificate
       community.crypto.x509_certificate:
@@ -139,4 +142,8 @@
     - name: Generate the PEM file (private key followed by the certificate)
       when: key_result.changed or cert_result.changed
       shell:
-        cmd: cat "{{ tls_pipeline_vars.path.key }}" "{{ tls_pipeline_vars.path.crt }}" > "{{ tls_pipeline_vars.path.pem }}" && chmod "{{ tls_pipeline_vars.perm.mode }}" "{{ tls_pipeline_vars.path.pem }}"
+        executable: /bin/bash
+        cmd: |
+          cat "{{ tls_pipeline_vars.path.key }}" "{{ tls_pipeline_vars.path.crt }}" > "{{ tls_pipeline_vars.path.pem }}"
+          chmod "{{ tls_pipeline_vars.perm.mode }}" "{{ tls_pipeline_vars.path.pem }}"
+          chown "{{ tls_pipeline_vars.perm.owner }}:{{ tls_pipeline_vars.perm.group }}" "{{ tls_pipeline_vars.path.pem }}"

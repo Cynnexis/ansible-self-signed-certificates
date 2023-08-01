@@ -17,7 +17,7 @@ You can see the role variables in [`defaults/main.yml`](https://github.com/Cynne
 self_signed_certs_dir: /usr/share/ca-certificates/my-certificates
 self_signed_owner: root
 self_signed_group: root
-self_signed_mode: 0644
+self_signed_mode: '644'
 self_signed_verify: true
 
 # Information about the maintainer of the certificates
@@ -43,7 +43,7 @@ self_signed_ca_organizational_unit_name: ''
 self_signed_ca_cert_validity: +3650d # 10 years
 self_signed_ca_owner: ''
 self_signed_ca_group: ''
-self_signed_ca_mode: 0664
+self_signed_ca_mode: '664'
 self_signed_ca_private_key_type: ''
 self_signed_ca_private_key_size: 0
 self_signed_ca_subject_alt_name:
@@ -86,6 +86,15 @@ Including an example of how to use your role (for instance, with variables passe
 # License
 
 MIT
+
+## Tests
+
+This role can be tested using Ansible Molecule:
+
+```bash
+pip install -r requirements.txt
+molecule test
+```
 
 # Author Information
 

@@ -71,6 +71,7 @@
         mode: 0750
 
     - name: Generate the private key for certificate
+      # Documentation: https://docs.ansible.com/ansible/latest/collections/community/crypto/openssl_privatekey_module.html
       community.crypto.openssl_privatekey:
         path: "{{ tls_pipeline_vars.path.key }}"
         type: "{{ tls_pipeline_args.private_key.type | default(omit) }}"
@@ -82,6 +83,7 @@
 
     - name: Certificate Signing Request (CSR) for CA
       when: tls_pipeline_args.type == 'ca'
+      # Documentation: https://docs.ansible.com/ansible/latest/collections/community/crypto/openssl_csr_module.html
       community.crypto.openssl_csr:
         path: "{{ tls_pipeline_vars.path.csr }}"
         privatekey_path: "{{ tls_pipeline_vars.path.key }}"
@@ -99,8 +101,8 @@
         country_name: "{{ tls_pipeline_args.csr.country_code | default(omit) }}"
         state_or_province_name: "{{ tls_pipeline_args.csr.state_or_province_name | default(omit) }}"
         locality_name: "{{ tls_pipeline_args.csr.locality_name | default(omit) }}"
-        organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }} "
-        organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }} "
+        organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }}"
+        organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }}"
         subject_alt_name: "{{ tls_pipeline_args.csr.subject_alt_name | default(omit) }}"
         owner: "{{ tls_pipeline_vars.perm.owner }}"
         group: "{{ tls_pipeline_vars.perm.group }}"
@@ -127,14 +129,15 @@
         country_name: "{{ tls_pipeline_args.csr.country_code | default(omit) }}"
         state_or_province_name: "{{ tls_pipeline_args.csr.state_or_province_name | default(omit) }}"
         locality_name: "{{ tls_pipeline_args.csr.locality_name | default(omit) }}"
-        organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }} "
-        organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }} "
+        organization_name: "{{ tls_pipeline_args.csr.organization_name | default(omit) }}"
+        organizational_unit_name: "{{ tls_pipeline_args.csr.organizational_unit_name | default(omit) }}"
         subject_alt_name: "{{ tls_pipeline_args.csr.subject_alt_name | default(omit) }}"
         owner: "{{ tls_pipeline_vars.perm.owner }}"
         group: "{{ tls_pipeline_vars.perm.group }}"
         mode: "{{ tls_pipeline_vars.perm.mode }}"
 
-    - name: Generate self-signed certificate from CSR, and signed with the generated CA certificate
+    - name: Generate x509 self-signed certificate from CSR, and signed with the generated CA certificate
+      # Documentation: https://docs.ansible.com/ansible/latest/collections/community/crypto/x509_certificate_module.html
       community.crypto.x509_certificate:
         path: "{{ tls_pipeline_vars.path.crt }}"
         csr_path: "{{ tls_pipeline_vars.path.csr }}"

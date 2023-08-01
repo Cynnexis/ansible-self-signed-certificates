@@ -370,3 +370,21 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/ansible,python,visualstudiocode,windows,linux,macos,venv,pycharm+all
+
+# Ignore directories that could contain certificates
+cert/
+certs/
+certificate/
+certificates/
+
+# Ignore private key certificates
+*.key
+
+# Ignore certificate signing requests
+*.csr
+
+# Ignore x509 certificates
+*.crt
+
+# Ignore PEM files (private key + certificate)
+*.pem

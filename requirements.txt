@@ -1,2 +1,7 @@
+ansible
+ansible-core
+ansible-lint
 cryptography>=37.0.2
+molecule-plugins[docker]
+molecule>=5.1.0
 passlib[bcrypt]

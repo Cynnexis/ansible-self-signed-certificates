@@ -1,0 +1,47 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files: vars.yml
+  tasks:
+
+    - name: Install Python dependencies
+      pip:
+        name:
+          - cryptography>=37.0.2
+
+    - name: Call ansible-self-signed-certificates
+      include_role:
+        name: ansible-self-signed-certificates
+      vars:
+        # General information
+        self_signed_certs_dir: '{{ certs_dir }}'
+        self_signed_owner: root
+        self_signed_group: root
+        self_signed_mode: '644'
+        self_signed_verify: true
+
+        # Information about the maintainer of the certificates
+        self_signed_default_common_name: '{{ common_name }}'
+        self_signed_default_email_address: '{{ email_address }}'
+        self_signed_default_country_name: '{{ country_name }}'
+        self_signed_default_state_or_province_name: '{{ state_or_province_name }}'
+        self_signed_default_locality_name: '{{ locality_name }}'
+        self_signed_default_organization_name: '{{ organization_name }}'
+        self_signed_default_organizational_unit_name: '{{ organizational_unit_name }}'
+        self_signed_default_cert_validity: '{{ cert_validity }}'
+        self_signed_default_private_key_type: '{{ private_key.type }}'
+        self_signed_default_private_key_size: '{{ private_key.size }}'
+
+        # CA configuration
+        self_signed_ca_subject_alt_name: '{{ ca_san }}'
+
+        # Server/client configuration
+        self_signed_certificates:
+
+          - name: 'example1'
+            subject_alt_name: '{{ ex1_san }}'
+
+          - name: 'example2'
+            subject_alt_name: '{{ ex2_san }}'

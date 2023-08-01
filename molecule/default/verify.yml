@@ -1,0 +1,77 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars_files: vars.yml
+  vars:
+    ca:
+      key: '{{ certs_dir }}/ca.key'
+      csr: '{{ certs_dir }}/ca.csr'
+      crt: '{{ certs_dir }}/ca.crt'
+      pem: '{{ certs_dir }}/ca.pem'
+    certs:
+      e1:
+        server:
+          key: '{{ certs_dir }}/example1/server.key'
+          csr: '{{ certs_dir }}/example1/server.csr'
+          crt: '{{ certs_dir }}/example1/server.crt'
+          pem: '{{ certs_dir }}/example1/server.pem'
+          san: '{{ ex1_san }}'
+        client:
+          key: '{{ certs_dir }}/example1/client.key'
+          csr: '{{ certs_dir }}/example1/client.csr'
+          crt: '{{ certs_dir }}/example1/client.crt'
+          pem: '{{ certs_dir }}/example1/client.pem'
+          san: '{{ ex1_san }}'
+      e2:
+        server:
+          key: '{{ certs_dir }}/example2/server.key'
+          csr: '{{ certs_dir }}/example2/server.csr'
+          crt: '{{ certs_dir }}/example2/server.crt'
+          pem: '{{ certs_dir }}/example2/server.pem'
+          san: '{{ ex2_san }}'
+        client:
+          key: '{{ certs_dir }}/example2/client.key'
+          csr: '{{ certs_dir }}/example2/client.csr'
+          crt: '{{ certs_dir }}/example2/client.crt'
+          pem: '{{ certs_dir }}/example2/client.pem'
+          san: '{{ ex2_san }}'
+  tasks:
+
+    - include_tasks: verify_bundle.yml
+      vars:
+        verify_bundle_args:
+          type: 'ca'
+          key: '{{ ca.key }}'
+          csr: '{{ ca.csr }}'
+          crt: '{{ ca.crt }}'
+          pem: '{{ ca.pem }}'
+          san: '{{ ca_san }}'
+
+    - include_tasks: verify_bundle.yml
+      vars:
+        verify_bundle_args:
+          type: 'server'
+          key: '{{ item.value.server.key }}'
+          csr: '{{ item.value.server.csr }}'
+          crt: '{{ item.value.server.crt }}'
+          pem: '{{ item.value.server.pem }}'
+          san: '{{ item.value.server.san }}'
+      loop: '{{ certs | dict2items }}'
+      loop_control:
+        label: '{{ item.value.server.key | dirname }}/{{ item.value.server.key | basename | regex_replace("\\..+$", "") }}'
+
+    - include_tasks: verify_bundle.yml
+      vars:
+        verify_bundle_args:
+          type: 'client'
+          key: '{{ item.value.client.key }}'
+          csr: '{{ item.value.client.csr }}'
+          crt: '{{ item.value.client.crt }}'
+          pem: '{{ item.value.client.pem }}'
+          san: '{{ item.value.client.san }}'
+      loop: '{{ certs | dict2items }}'
+      loop_control:
+        label: '{{ item.value.server.key | dirname }}/{{ item.value.server.key | basename | regex_replace("\\..+$", "") }}'

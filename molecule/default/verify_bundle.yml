@@ -1,0 +1,104 @@
+---
+
+#
+# Verify the given certificates
+# Variables:
+# verify_bundle_args:
+#   type: '{ca|server|client}'
+#   key: '<path>'
+#   csr: '<path>'
+#   crt: '<path>'
+#   pem: '<path>'
+#   san: []
+#
+
+### KEY ###
+
+- name: Fetch information about {{ verify_bundle_args.type }} private key
+  community.crypto.openssl_privatekey_info:
+    path: '{{ verify_bundle_args.key }}'
+    check_consistency: true
+    return_private_key_data: false
+  register: info_key_result
+
+- name: Print {{ verify_bundle_args.type }} private key info to the console
+  when: ansible_verbosity >= 2
+  debug:
+    var: info_key_result
+
+- name: Assert {{ verify_bundle_args.type }} private key
+  assert:
+    that:
+      - info_key_result.can_load_key
+      - info_key_result.can_parse_key
+      - info_key_result.key_is_consistent != false
+      - info_key_result.type == private_key.type
+      - info_key_result.public_data.size == private_key.size
+      - info_key_result.public_data.exponent > 0
+      - info_key_result.public_data.modulus > 0
+
+### CSR ###
+
+- name: Fetch information about the {{ verify_bundle_args.type }} signing request
+  community.crypto.openssl_csr_info:
+    path: '{{ verify_bundle_args.csr }}'
+  register: info_csr_result
+
+- name: Print {{ verify_bundle_args.type }} signing request info to the console
+  when: ansible_verbosity >= 2
+  debug:
+    var: info_csr_result
+
+- name: Assert {{ verify_bundle_args.type }} signing request
+  assert:
+    that:
+      - verify_bundle_args.type == 'ca' and info_csr_result.basic_constraints[0] == 'CA:TRUE' or verify_bundle_args.type != 'ca' and info_csr_result.basic_constraints[0] == 'CA:FALSE'
+      - info_csr_result.basic_constraints_critical
+      - verify_bundle_args.type == 'ca' and (info_csr_result.extended_key_usage == None or info_csr_result.extended_key_usage | length == 0) or verify_bundle_args.type != 'ca' and info_csr_result.extended_key_usage[0] == 'TLS Web ' ~ (verify_bundle_args.type|capitalize) ~ ' Authentication'
+      - verify_bundle_args.type == 'ca' and 'CRL Sign' in info_csr_result.key_usage or verify_bundle_args.type != 'ca' and 'Non Repudiation' in info_csr_result.key_usage
+      - "'Digital Signature' in info_csr_result.key_usage"
+      - "'Key Encipherment' in info_csr_result.key_usage"
+      - info_csr_result.key_usage_critical
+      - info_csr_result.public_key_type == private_key.type
+      - info_csr_result.signature_valid
+      - info_csr_result.subject.commonName == common_name
+      - info_csr_result.subject.emailAddress == email_address
+      # - info_csr_result.subject.countryName == country_name
+      - info_csr_result.subject.stateOrProvinceName == state_or_province_name
+      # - info_csr_result.subject.localityName == locality_name
+      - info_csr_result.subject.organizationName == organization_name
+      - info_csr_result.subject.organizationalUnitName == organizational_unit_name
+      - info_csr_result.subject_alt_name | difference(verify_bundle_args.san) | length == 0
+      - info_csr_result.subject_ordered | length > 0
+      - info_key_result.public_data.size == private_key.size
+      - info_key_result.public_data.exponent > 0
+      - info_key_result.public_data.modulus > 0
+
+### CRT ###
+
+- name: Fetch information about the {{ verify_bundle_args.type }} x509 certificate
+  community.crypto.x509_certificate_info:
+    path: '{{ verify_bundle_args.crt }}'
+    valid_at:
+      deadline: '{{ cert_validity }}'
+  register: info_crt_result
+
+- name: Print {{ verify_bundle_args.type }} x509 certificate info to the console
+  when: ansible_verbosity >= 2
+  debug:
+    var: info_crt_result
+
+- name: Assert {{ verify_bundle_args.type }} x509 certificate
+  assert:
+    that:
+      - not info_crt_result.expired
+      - info_crt_result.issuer.commonName == common_name
+      - info_crt_result.issuer.emailAddress == email_address
+      # - info_crt_result.issuer.countryName == country_name
+      - info_crt_result.issuer.stateOrProvinceName == state_or_province_name
+      # - info_crt_result.issuer.localityName == locality_name
+      - info_crt_result.issuer.organizationName == organization_name
+      - info_crt_result.issuer.organizationalUnitName == organizational_unit_name
+      - info_crt_result.issuer_ordered | length > 0
+      - info_csr_result.subject_alt_name | difference(verify_bundle_args.san) | length == 0
+      - not info_crt_result.valid_at.deadline

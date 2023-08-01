@@ -1,0 +1,35 @@
+---
+
+#
+# File for all variables that are common between the convergence and verify
+# file.
+#
+
+certs_dir: /usr/share/ca-certificates/tests
+
+common_name: example.com
+email_address: john.doe@example.com
+country_name: Country
+state_or_province_name: State
+locality_name: Locality
+organization_name: Organization
+organizational_unit_name: Unit
+
+cert_validity: +3650d # 10 years
+
+private_key:
+  type: RSA
+  size: 4096
+
+# CA configuration
+ca_san:
+  - 'DNS:example.com'
+  - 'DNS:*.example.com'
+
+ex1_san:
+  - 'DNS:example.com'
+  - 'DNS:*.example.com'
+
+ex2_san:
+  - 'DNS:example2.com'
+  - 'DNS:*.example2.com'

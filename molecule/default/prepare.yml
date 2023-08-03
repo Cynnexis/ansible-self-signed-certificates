@@ -3,6 +3,16 @@
   hosts: all
   become: true
   gather_facts: false
-  roles:
-    - role: buluma.bootstrap
-    - role: buluma.python_pip
+  tasks:
+    - include_role:
+        name: buluma.bootstrap
+
+    - include_role:
+        name: buluma.python_pip
+
+    - name: Install dependencies
+      apt:
+        update_cache: true
+        name:
+          - rsync
+        state: present

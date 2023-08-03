@@ -1,56 +1,121 @@
 ---
 # tasks file for ansible-self-signed-certificates
 
-- name: Generate CA certificate
-  include_tasks: tls_pipeline.yml
-  vars:
-    tls_pipeline_args:
-      output_dir: "{{ self_signed_certs_dir }}"
-      type: ca
-      validity: "{{ self_signed_ca_cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
-      private_key:
-        type: "{{ self_signed_ca_private_key_type | default(self_signed_default_private_key_type | default(omit)) }}"
-        size: "{{ self_signed_ca_private_key_size | default(self_signed_default_private_key_size | default(omit)) }}"
-      csr:
-        common_name: "{{ self_signed_ca_common_name | default(self_signed_default_common_name | default(omit)) }}"
-        subject_alt_name: "{{ self_signed_ca_subject_alt_name | default(omit) }}"
-        country_name: "{{ self_signed_ca_country_name | default(self_signed_default_country_name | default(omit)) }}"
-        state_or_province_name: "{{ self_signed_ca_state_or_province_name | default(self_signed_default_state_or_province_name | default(omit)) }}"
-        organization_name: "{{ self_signed_ca_organization_name | default(self_signed_default_organization_name | default(omit)) }}"
-        organizational_unit_name: "{{ self_signed_ca_organizational_unit_name | default(self_signed_default_organizational_unit_name | default(omit)) }}"
-      permissions:
-        owner: "{{ self_signed_ca_owner | default(self_signed_owner | default(omit)) }}"
-        group: "{{ self_signed_ca_group | default(self_signed_group | default(omit)) }}"
-        mode: "{{ self_signed_ca_mode | default(self_signed_mode | default(omit)) }}"
-      email: "{{ self_signed_ca_email_address | default(self_signed_default_email_address | default(omit)) }}"
-      verify: false
+- name: Send cache from local host to remote host
+  when: self_signed_cache
+  block:
 
-- name: Generate server and client certificates
-  include_tasks: service_pipeline.yml
-  vars:
-    service_pipeline_args:
-      name: "{{ item.name }}"
-      cert_dir: "{{ self_signed_certs_dir }}"
-      validity: "{{ item.cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
-      private_key:
-        type: "{{ item.private_key_type | default(self_signed_default_private_key_type | default(omit)) }}"
-        size: "{{ item.private_key_size | default(self_signed_default_private_key_size | default(omit)) }}"
-      csr:
-        common_name: "{{ item.common_name | default(self_signed_default_common_name | default(omit)) }}"
-        subject_alt_name: "{{ item.subject_alt_name | default(omit) }}"
-        country_name: "{{ item.country_name | default(self_signed_default_country_name | default(omit)) }}"
-        state_or_province_name: "{{ item.state_or_province_name | default(self_signed_default_state_or_province_name | default(omit)) }}"
-        organization_name: "{{ item.organization_name | default(self_signed_default_organization_name | default(omit)) }}"
-        organizational_unit_name: "{{ item.organizational_unit_name | default(self_signed_default_organizational_unit_name | default(omit)) }}"
-      ca:
-        key: "{{ ca.key }}"
-        crt: "{{ ca.crt }}"
-      permissions:
-        owner: "{{ item.owner | default(self_signed_owner | default(omit)) }}"
-        group: "{{ item.group | default(self_signed_group | default(omit)) }}"
-        mode: "{{ item.mode | default(self_signed_mode | default(omit)) }}"
-      email: "{{ item.email_address | default(self_signed_default_email_address | default(omit)) }}"
-      verify: false
-  loop: "{{ self_signed_certificates }}"
-  loop_control:
-    label: "{{ item.name }}"
+    - name: Check local cache
+      delegate_to: 127.0.0.1
+      run_once: true
+      become: '{{ self_signed_cache_local_become }}'
+      stat:
+        path: '{{ self_signed_cache_local_dir }}'
+      register: local_host_cache_dir_result
+
+    - name: Copy files from container to remote host
+      when: local_host_cache_dir_result.stat.exists
+      synchronize:
+        src: "{{ self_signed_cache_local_dir }}"
+        dest: "{{ self_signed_certs_dir }}"
+        mode: push
+        archive: true
+        compress: true
+        delete: true
+        recursive: true
+      register: send_cache_result
+
+- name: Generate CA, server and client certificates
+  when: not self_signed_cache or not self_signed_cache_skip_if_sent and send_cache_result is defined and send_cache_result.changed or local_host_cache_dir_result is defined and not local_host_cache_dir_result.stat.exists
+  block:
+
+    - name: Generate CA certificate
+      include_tasks: tls_pipeline.yml
+      vars:
+        tls_pipeline_args:
+          output_dir: "{{ self_signed_certs_dir }}"
+          type: ca
+          validity: "{{ self_signed_ca_cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
+          private_key:
+            type: "{{ self_signed_ca_private_key_type | default(self_signed_default_private_key_type | default(omit)) }}"
+            size: "{{ self_signed_ca_private_key_size | default(self_signed_default_private_key_size | default(omit)) }}"
+          csr:
+            common_name: "{{ self_signed_ca_common_name | default(self_signed_default_common_name | default(omit)) }}"
+            subject_alt_name: "{{ self_signed_ca_subject_alt_name | default(omit) }}"
+            country_name: "{{ self_signed_ca_country_name | default(self_signed_default_country_name | default(omit)) }}"
+            state_or_province_name: "{{ self_signed_ca_state_or_province_name | default(self_signed_default_state_or_province_name | default(omit)) }}"
+            organization_name: "{{ self_signed_ca_organization_name | default(self_signed_default_organization_name | default(omit)) }}"
+            organizational_unit_name: "{{ self_signed_ca_organizational_unit_name | default(self_signed_default_organizational_unit_name | default(omit)) }}"
+          permissions:
+            owner: "{{ self_signed_ca_owner | default(self_signed_owner | default(omit)) }}"
+            group: "{{ self_signed_ca_group | default(self_signed_group | default(omit)) }}"
+            mode: "{{ self_signed_ca_mode | default(self_signed_mode | default(omit)) }}"
+          email: "{{ self_signed_ca_email_address | default(self_signed_default_email_address | default(omit)) }}"
+          verify: false
+      register: ca_result
+
+    - name: Generate server and client certificates
+      include_tasks: service_pipeline.yml
+      vars:
+        service_pipeline_args:
+          name: "{{ item.name }}"
+          cert_dir: "{{ self_signed_certs_dir }}"
+          validity: "{{ item.cert_validity | default(self_signed_default_cert_validity | default(omit)) }}"
+          private_key:
+            type: "{{ item.private_key_type | default(self_signed_default_private_key_type | default(omit)) }}"
+            size: "{{ item.private_key_size | default(self_signed_default_private_key_size | default(omit)) }}"
+          csr:
+            common_name: "{{ item.common_name | default(self_signed_default_common_name | default(omit)) }}"
+            subject_alt_name: "{{ item.subject_alt_name | default(omit) }}"
+            country_name: "{{ item.country_name | default(self_signed_default_country_name | default(omit)) }}"
+            state_or_province_name: "{{ item.state_or_province_name | default(self_signed_default_state_or_province_name | default(omit)) }}"
+            organization_name: "{{ item.organization_name | default(self_signed_default_organization_name | default(omit)) }}"
+            organizational_unit_name: "{{ item.organizational_unit_name | default(self_signed_default_organizational_unit_name | default(omit)) }}"
+          ca:
+            key: "{{ ca.key }}"
+            crt: "{{ ca.crt }}"
+          permissions:
+            owner: "{{ item.owner | default(self_signed_owner | default(omit)) }}"
+            group: "{{ item.group | default(self_signed_group | default(omit)) }}"
+            mode: "{{ item.mode | default(self_signed_mode | default(omit)) }}"
+          email: "{{ item.email_address | default(self_signed_default_email_address | default(omit)) }}"
+          verify: false
+      loop: "{{ self_signed_certificates }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: certs_result
+
+- name: Cache results to local host
+  when: self_signed_cache and (ca_result is defined and ca_result.changed or certs_result is defined and certs_result.changed)
+  block:
+
+    - name: Backup existing directory
+      run_once: true
+      delegate_to: 127.0.0.1
+      become: '{{ self_signed_cache_local_become }}'
+      when: self_signed_cache_local_backup
+      block:
+
+        - name: Check current cache directory in local host
+          stat:
+            path: '{{ self_signed_cache_local_dir }}'
+          register: local_host_cache_dir_result
+
+        - name: Backup current cache directory
+          when: local_host_cache_dir_result.stat.exists
+          vars:
+            old: "{{ self_signed_cache_local_dir }}"
+            new: "{{ self_signed_cache_local_dir | regex_replace('/+$', '') }}.{{ ansible_date_time.iso8601_micro | regex_replace(':', '-') }}"
+          command:
+            cmd: /bin/mv "{{ old }}" "{{ new }}"
+            removes: "{{ old }}"
+
+    - name: Copy files from container to remote host
+      synchronize:
+        src: "{{ self_signed_certs_dir }}"
+        dest: "{{ self_signed_cache_local_dir }}"
+        mode: pull
+        archive: true
+        compress: true
+        delete: true
+        recursive: true

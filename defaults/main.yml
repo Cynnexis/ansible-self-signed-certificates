@@ -55,3 +55,10 @@ self_signed_certificates:
     subject_alt_name:
       - 'DNS:example.com'
       - 'DNS:*.example.com'
+
+# Cache control
+self_signed_cache: false
+self_signed_cache_local_dir: certs/
+self_signed_cache_local_backup: true
+self_signed_cache_local_become: false
+self_signed_cache_skip_if_sent: false

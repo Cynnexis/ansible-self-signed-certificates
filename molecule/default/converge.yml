@@ -45,3 +45,10 @@
 
           - name: 'example2'
             subject_alt_name: '{{ ex2_san }}'
+
+        # Cache control
+        self_signed_cache: true
+        self_signed_cache_local_dir: ../../certs/
+        self_signed_cache_local_backup: true
+        self_signed_cache_local_become: false
+        self_signed_cache_skip_if_sent: true
